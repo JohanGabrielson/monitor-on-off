@@ -1,16 +1,44 @@
 #!/bin/bash
 
+# ============================
+#  Monitor Mode
+#  by Johan 
+# ============================
+
+# Colors
+RED="\e[31m"
+GREEN="\e[32m"
+YELLOW="\e[33m"
+CYAN="\e[36m"
+RESET="\e[0m"
+
+
+# ASCII Banner
+echo -e "${CYAN}"
+echo "┌──────────────────────────┐"
+echo "│       Monitor mode       │"
+echo "└──────────────────────────┘"
+echo -e "${RESET}"
+
+
+
 IFACE="wlan0"
 MONITOR="wlan0mon"
 
+
+
+# Detect if monitor mode is active
 if iwconfig 2>/dev/null | grep -q "$MONITOR"; then
-    echo "[*] Monitor mode detected. Switching back to managed mode..."
-    sudo airmon-ng stop $MONITOR
+    echo -e "${RED}[*] Monitor mode detected. Switching back to managed mode...${RESET}"
+    sudo airmon-ng stop $MONITOR >/dev/null 2>&1
     sudo systemctl restart NetworkManager
-    echo "[+] Adapter is now back in normal mode."
+    echo -e "${GREEN}[+] Adapter is now back in normal mode.${RESET}"
 else
-    echo "[*] Managed mode detected. Switching to monitor mode..."
-    sudo airmon-ng check kill
-    sudo airmon-ng start $IFACE
-    echo "[+] Adapter is now in monitor mode."
+    echo -e "${CYAN}[*] Managed mode detected. Switching to monitor mode...${RESET}"
+    sudo airmon-ng check kill >/dev/null 2>&1
+    sudo airmon-ng start $IFACE >/dev/null 2>&1
+    echo -e "${GREEN}[+] Adapter is now in monitor mode.${RESET}"
 fi
+
+echo ""
+
