@@ -10,7 +10,7 @@
 ~~~
 git clone https://github.com/JohanGabrielson/monitor-on-off.git
 cd monitor-on-off
-chmod +x monitor-on-off.sh****
+chmod +x monitor-on-off.sh
 ~~~
 
 ### Usage
