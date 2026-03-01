@@ -6,6 +6,8 @@
 
 # Colors
 RED="\e[31m"
+PINK="\e[38;5;205m"
+PURPLE="\e[38;5;141m"
 GREEN="\e[32m"
 YELLOW="\e[33m"
 CYAN="\e[36m"
@@ -13,45 +15,92 @@ RESET="\e[0m"
 
 
 # ASCII Banner
-echo -e "${CYAN}"
-echo "┌──────────────────────────┐"
-echo "│       Monitor mode       │"
-echo "└──────────────────────────┘"
-echo -e "${RESET}"
+banner() {
+    echo -e "${PURPLE}"
+    echo "┌──────────────────────────┐"
+    echo "│       Monitor mode       │"
+    echo "└──────────────────────────┘"
+    echo -e "${RESET}"
+}
 
 
 
-IFACE="wlan0"
-MONITOR="wlan0mon"
+# Auto-detect interface 
+detect_interface() {
+# find wireless interface 
+
+    WIFI_IFACES=$(iw dev 2>/dev/null | grep Interface | awk '{print $2}')
+
+    if [ -z "$WIFI_IFACES" ]; then
+        echo -e "${RED} No wireless adapter found.${RESET}"
+        echo -e "${YELLOW} Connect adapter and try again.${RESET}"
+        exit 1
+    fi
+
+    # choose first interface
+    IFACE=$(echo "$WIFI_IFACES" | head -n 1)
+    MONITOR="${IFACE}mon"
+}
 
 
-# -------------------------------
-# Adapter check
-# -------------------------------
-if ! ip link show "$IFACE" >/dev/null 2>&1 && ! ip link show "$MONITOR" >/dev/null 2>&1; then
-
-    echo -e "${RED} Interface '$IFACE' not detected.${RESET}"
-    echo -e "${YELLOW} Connect adapter and try again.${RESET}"
-    exit 1
-fi
-
-echo -e "${GREEN}  Adapter found: $IFACE${RESET}"
-# -------------------------------
 
 
-
-# Detect if monitor mode is active
-if iwconfig 2>/dev/null | grep -q "$MONITOR"; then
-    echo -e "${CYAN}[*] Monitor mode detected. Switching back to managed mode...${RESET}"
-    sudo airmon-ng stop $MONITOR >/dev/null 2>&1
-    sudo systemctl restart NetworkManager
-    echo -e "${GREEN}[+] Adapter is now back in normal mode.${RESET}"
-else
-    echo -e "${CYAN}[*] Managed mode detected. Switching to monitor mode...${RESET}"
+# Start monitor mode
+start() {
+    echo -e "${CYAN} Starting monitor mode ${IFACE}...${RESET}"
     sudo airmon-ng check kill >/dev/null 2>&1
-    sudo airmon-ng start $IFACE >/dev/null 2>&1
-    echo -e "${GREEN}[+] Adapter is now in monitor mode.${RESET}"
-fi
+    sudo airmon-ng start "$IFACE" >/dev/null 2>&1
+    echo -e "${GREEN} Monitor mode active (${MONITOR})${RESET}"
+
+}
+
+# stop monitor mode
+stop() {
+    echo -e "${PINK} Stopping monitor mode...${RESET}"
+    sudo airmon-ng stop "$MONITOR" >/dev/null 2>&1
+    sudo systemctl restart NetworkManager >/dev/null 2>&1
+
+    echo -e "${GREEN} Back in managed mode  (${IFACE})${RESET}"
+
+}
+
+
+# status 
+status() {
+    echo -e "${YELLOW}📡 Interface status:${RESET}"
+    iwconfig 2>/dev/null | grep -E "wlan|wl|mon"
+
+}
+
+# mac randomizaton
+
+
+
+# menu
+menu() {
+    echo -e "${CYAN}"
+    echo "1) Start monitor mode"
+    echo "2) Stop monitor mode"
+    echo "3) Show status"
+    echo "4) Exit"
+    echo -e "${RESET}"
+
+    read -rp "Choose an option: " choice
+
+    case $choice in
+        1) start ;;
+        2) stop ;;
+        3) status ;;
+        4) exit 0 ;;
+        *) echo -e "${RED}Invalid selection.${RESET}" ;;
+    esac
+
+}
 
 echo ""
 
+# main
+
+banner
+detect_interface
+menu
