@@ -176,4 +176,7 @@ echo ""
 
 banner
 detect_interface
-menu
+
+while true; do
+    menu
+done
