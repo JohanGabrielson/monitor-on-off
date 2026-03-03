@@ -72,8 +72,79 @@ status() {
 
 }
 
-# mac randomizaton
+mac_menu() {
+    while true; do
+        clear
+        echo -e "${PINK}=== MAC Changer Menu ===${RESET}"
+        echo -e "${CYAN}1) Randomize MAC${RESET}"
+        echo -e "${CYAN}2) Restore original MAC${RESET}"
+        echo -e "${CYAN}3) Show current MAC${RESET}"
+        echo -e "${CYAN}4) Back to main menu${RESET}"
+        echo -n "Choose an option: "
+        read choice
 
+        case $choice in
+            1) randomize_mac ;;
+            2) restore_mac ;;
+            3) show_mac ;;
+            4) break ;;   
+            *) echo -e "${RED}Invalid choice${RESET}" ;;
+        esac
+
+        echo -e "${YELLOW}Press Enter to continue...${RESET}"
+        read
+    done
+}
+
+
+# mac randomizaton
+randomize_mac() {
+    echo -e "${PINK} Randomizing MAC address...${RESET}"
+
+    if [ -z "$IFACE" ]; then
+        echo -e "${RED}No interface selected!${RESET}"
+        return
+    fi
+
+    # Generate random MAC
+    NEW_MAC=$(printf '02:%02X:%02X:%02X:%02X:%02X\n' \
+        $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) \
+        $((RANDOM%256)) $((RANDOM%256)))
+
+    # Save original MAC globally
+    ORIGINAL_MAC=$(cat /sys/class/net/$IFACE/address)
+
+    sudo ip link set "$IFACE" down
+    sudo ip link set "$IFACE" address "$NEW_MAC"
+    sudo ip link set "$IFACE" up
+
+    echo -e "${CYAN} New MAC: ${NEW_MAC}${RESET}"
+    echo -e "${YELLOW} Original MAC saved: ${ORIGINAL_MAC}${RESET}"
+}
+
+
+# restore mac
+restore_mac() {
+    if [ -z "$ORIGINAL_MAC" ]; then
+        echo -e "${RED}No original MAC stored!${RESET}"
+        return
+    fi
+
+    echo -e "${PINK} Restoring original MAC...${RESET}"
+
+    sudo ip link set "$IFACE" down
+    sudo ip link set "$IFACE" address "$ORIGINAL_MAC"
+    sudo ip link set "$IFACE" up
+
+    echo -e "${GREEN} MAC restored: ${ORIGINAL_MAC}${RESET}"
+}
+
+
+# show mac
+show_mac() {
+    CURRENT=$(cat /sys/class/net/$IFACE/address)
+    echo -e "${CYAN}Current MAC for ${IFACE}: ${CURRENT}${RESET}"
+}
 
 
 # menu
@@ -82,7 +153,8 @@ menu() {
     echo "1) Start monitor mode"
     echo "2) Stop monitor mode"
     echo "3) Show status"
-    echo "4) Exit"
+    echo "4) Mac changer"
+    echo "5) Exit"
     echo -e "${RESET}"
 
     read -rp "Choose an option: " choice
@@ -91,7 +163,8 @@ menu() {
         1) start ;;
         2) stop ;;
         3) status ;;
-        4) exit 0 ;;
+        4) mac_menu ;;
+        5) exit 0 ;;
         *) echo -e "${RED}Invalid selection.${RESET}" ;;
     esac
 
