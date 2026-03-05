@@ -74,7 +74,7 @@ status() {
 
 mac_menu() {
     while true; do
-        clear
+#        clear
         echo -e "${PINK}=== MAC Changer Menu ===${RESET}"
         echo -e "${CYAN}1) Randomize MAC${RESET}"
         echo -e "${CYAN}2) Restore original MAC${RESET}"
@@ -88,13 +88,17 @@ mac_menu() {
             2) restore_mac ;;
             3) show_mac ;;
             4) break ;;   
-            *) echo -e "${RED}Invalid choice${RESET}" ;;
+            *) echo -e "${RED}Invalid choice${RESET}"; sleep 1 ;;
         esac
 
-        echo -e "${YELLOW}Press Enter to continue...${RESET}"
-        read
+#        echo -e "${YELLOW} Press Enter to continue...${RESET}"
+       sleep 1 
+     #  read
     done
 }
+
+
+
 
 
 # mac randomizaton
@@ -142,13 +146,20 @@ restore_mac() {
 
 # show mac
 show_mac() {
-    CURRENT=$(cat /sys/class/net/$IFACE/address)
-    echo -e "${CYAN}Current MAC for ${IFACE}: ${CURRENT}${RESET}"
-}
+    local mac=$(cat /sys/class/net/$IFACE/address 2>/dev/null)
 
+    if [[ -z "$mac" ]]; then
+        echo -e "${RED}Could not read MAC for interface ${IFACE}${RESET}"
+        return 1
+    fi
+
+    echo -e "${CYAN}Current MAC for ${IFACE}: ${mac}${RESET}"
+    
+}
 
 # menu
 menu() {
+    echo -e "${PINK}=== MAIN Menu ===${RESET}"
     echo -e "${CYAN}"
     echo "1) Start monitor mode"
     echo "2) Stop monitor mode"
