@@ -13,9 +13,11 @@ YELLOW="\e[33m"
 CYAN="\e[36m"
 RESET="\e[0m"
 
+QUIET=false
 
-# ASCII Banner
+# ASCII banner
 banner() {
+    [[ $QUIET == true ]] && return
     echo -e "${PURPLE}"
     echo "┌──────────────────────────┐"
     echo "│       Monitor mode       │"
@@ -157,6 +159,9 @@ show_mac() {
     
 }
 
+
+
+
 # menu
 menu() {
     echo -e "${PINK}=== MAIN Menu ===${RESET}"
@@ -184,6 +189,43 @@ menu() {
 echo ""
 
 # main
+
+
+# flag parser
+case "$1" in
+    --quiet)
+        QUIET=true
+        ;;
+    --help)
+        echo "Monitor-on-off.sh –  options:"
+        echo ""
+        echo "  --help        Show this help message"
+        echo "  --quiet       Run without banner or colors"
+        echo ""
+        echo "Features:"
+        echo "  1) Start monitor mode"
+        echo "  2) Stop monitor mode"
+        echo "  3) Show interface status"
+        echo "  4) MAC changer menu"
+        echo ""
+        echo "example:"
+        echo "  ./monitor-on-off.sh --quiet"
+        exit 0
+        ;;
+
+esac
+
+# disable colors in quiet mode
+if [[ $QUIET == true ]]; then
+    RED=""
+    PINK=""
+    PURPLE=""
+    GREEN=""
+    YELLOW=""
+    CYAN=""
+    RESET=""
+fi
+
 
 banner
 detect_interface
