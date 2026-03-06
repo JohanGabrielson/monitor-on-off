@@ -27,23 +27,34 @@ banner() {
 
 
 
-# Auto-detect interface 
+
+# Auto-detect interface
 detect_interface() {
-# find wireless interface 
 
-    WIFI_IFACES=$(iw dev 2>/dev/null | grep Interface | awk '{print $2}')
+    # Find real wireless interfaces (wl*)
+    WIFI_IFACES=($(ls /sys/class/net | grep -E '^wl'))
 
-    if [ -z "$WIFI_IFACES" ]; then
-        echo -e "${RED} No wireless adapter found.${RESET}"
-        echo -e "${YELLOW} Connect adapter and try again.${RESET}"
+    # No adapters found
+    if [[ ${#WIFI_IFACES[@]} -eq 0 ]]; then
+        echo -e "${RED}No wireless adapter found.${RESET}"
+        echo -e "${YELLOW}Connect an adapter and try again.${RESET}"
         exit 1
     fi
 
-    # choose first interface
-    IFACE=$(echo "$WIFI_IFACES" | head -n 1)
+    # Exactly one adapter found
+    if [[ ${#WIFI_IFACES[@]} -eq 1 ]]; then
+        IFACE="${WIFI_IFACES[0]}"
+    else
+        # Multiple adapters found – let the user choose
+        echo -e "${YELLOW}Multiple wireless adapters detected:${RESET}"
+        select iface in "${WIFI_IFACES[@]}"; do
+            IFACE="$iface"
+            break
+        done
+    fi
+
     MONITOR="${IFACE}mon"
 }
-
 
 
 
@@ -57,21 +68,39 @@ start() {
 }
 
 # stop monitor mode
+
 stop() {
-    echo -e "${PINK} Stopping monitor mode...${RESET}"
+    echo -e "${PINK}Stopping monitor mode...${RESET}"
+
     sudo airmon-ng stop "$MONITOR" >/dev/null 2>&1
     sudo systemctl restart NetworkManager >/dev/null 2>&1
 
-    echo -e "${GREEN} Back in managed mode  (${IFACE})${RESET}"
+    # Give the system time to recreate wlan0
+    sleep 1
 
+    echo -e "${GREEN}Back in managed mode (${IFACE})${RESET}"
 }
 
-
 # status 
-status() {
-    echo -e "${YELLOW}📡 Interface status:${RESET}"
-    iwconfig 2>/dev/null | grep -E "wlan|wl|mon"
 
+status() {
+
+    # Ensure interface exists
+    if [[ ! -d "/sys/class/net/$IFACE" ]]; then
+        echo -e "${RED}Interface $IFACE is not available yet.${RESET}"
+        echo -e "${YELLOW}Try again in a moment.${RESET}"
+        return
+    fi
+
+    MODE=$(iwconfig "$IFACE" 2>/dev/null | grep "Mode:" | awk -F: '{print $2}' | awk '{print $1}')
+    MAC=$(cat /sys/class/net/$IFACE/address 2>/dev/null)
+    CHAN=$(iw dev "$IFACE" info 2>/dev/null | grep channel | awk '{print $2}')
+
+    echo -e "${YELLOW} Interface status:${RESET}"
+    echo -e "${CYAN}Interface:${RESET} $IFACE"
+    echo -e "${CYAN}MAC:      ${RESET} ${MAC:-Unknown}"
+    echo -e "${CYAN}Mode:     ${RESET} ${MODE:-Unknown}"
+    echo -e "${CYAN}Channel:  ${RESET} ${CHAN:-N/A}"
 }
 
 mac_menu() {
@@ -89,7 +118,7 @@ mac_menu() {
             1) randomize_mac ;;
             2) restore_mac ;;
             3) show_mac ;;
-            4) break ;;   
+            4) break ;;
             *) echo -e "${RED}Invalid choice${RESET}"; sleep 1 ;;
         esac
 
