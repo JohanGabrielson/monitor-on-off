@@ -13,6 +13,8 @@ YELLOW="\e[33m"
 CYAN="\e[36m"
 RESET="\e[0m"
 
+MAC_STORE="/tmp/original_mac_${USER}"
+
 QUIET=false
 
 SCRIPT_VERSION="1.0"
@@ -70,9 +72,15 @@ start() {
     echo -e "${CYAN} Starting monitor mode ${IFACE}...${RESET}"
     sudo airmon-ng check kill >/dev/null 2>&1
     sudo airmon-ng start "$IFACE" >/dev/null 2>&1
-    echo -e "${GREEN} Monitor mode active (${MONITOR})${RESET}"
 
+    # Efter start interface name will chasnge
+    IFACE=$(ls /sys/class/net | grep -E '^wl.*mon$' | head -n 1)
+    MONITOR="$IFACE"
+
+    echo -e "${GREEN} Monitor mode active (${MONITOR})${RESET}"
 }
+
+
 
 # stop monitor mode
 
@@ -82,10 +90,13 @@ stop() {
     sudo airmon-ng stop "$MONITOR" >/dev/null 2>&1
     sudo systemctl restart NetworkManager >/dev/null 2>&1
 
-    # Give the system time to recreate wlan0
     sleep 1
 
-    echo -e "${GREEN}Back in managed mode (${IFACE})${RESET}"
+    # after stop interface will return to wlan0
+    IFACE=$(ls /sys/class/net | grep -E '^wl' | grep -v mon | head -n 1)
+    MONITOR="${IFACE}mon"
+
+    echo -e "${GREEN} Back in managed mode (${IFACE})${RESET}"
 }
 
 # status 
@@ -148,13 +159,16 @@ randomize_mac() {
         return
     fi
 
-    # Generate random MAC
+    # Save original MAC unless already saved
+    if [ ! -f "$MAC_STORE" ]; then
+        cat /sys/class/net/$IFACE/address > "$MAC_STORE"
+    fi
+
+    ORIGINAL_MAC=$(cat "$MAC_STORE")
+
     NEW_MAC=$(printf '02:%02X:%02X:%02X:%02X:%02X\n' \
         $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) \
         $((RANDOM%256)) $((RANDOM%256)))
-
-    # Save original MAC globally
-    ORIGINAL_MAC=$(cat /sys/class/net/$IFACE/address)
 
     sudo ip link set "$IFACE" down
     sudo ip link set "$IFACE" address "$NEW_MAC"
@@ -167,17 +181,12 @@ randomize_mac() {
 
 # restore mac
 restore_mac() {
-    if [ -z "$ORIGINAL_MAC" ]; then
+    if [ ! -f "$MAC_STORE" ]; then
         echo -e "${RED}No original MAC stored!${RESET}"
         return
-        echo "  --help        Show this help message"
-        echo "  --quiet       Run without banner or colors"
-        echo ""
-        echo "Features:"
-        echo "  1) Start monitor mode"
-        echo "  2) Stop monitor mode"
-        echo "  3) Show interface status"
     fi
+
+    ORIGINAL_MAC=$(cat "$MAC_STORE")
 
     echo -e "${PINK} Restoring original MAC...${RESET}"
 
@@ -186,6 +195,8 @@ restore_mac() {
     sudo ip link set "$IFACE" up
 
     echo -e "${GREEN} MAC restored: ${ORIGINAL_MAC}${RESET}"
+
+   
 }
 
 
