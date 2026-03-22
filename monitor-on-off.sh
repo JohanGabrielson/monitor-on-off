@@ -15,10 +15,17 @@ RESET="\e[0m"
 
 QUIET=false
 
+SCRIPT_VERSION="1.0"
+SCRIPT_AUTHOR="Johan"
+now=$(date "+%Y-%m-%d %H:%M:%S")
+
 # ASCII banner
 banner() {
     [[ $QUIET == true ]] && return
     echo -e "${PURPLE}"
+    printf "  %-43s \n" "Version : $SCRIPT_VERSION"
+    printf "  %-43s \n" "Author  : $SCRIPT_AUTHOR"
+    printf "  %-43s \n" "Date    : $now"
     echo "┌──────────────────────────┐"
     echo "│       Monitor mode       │"
     echo "└──────────────────────────┘"
@@ -163,6 +170,13 @@ restore_mac() {
     if [ -z "$ORIGINAL_MAC" ]; then
         echo -e "${RED}No original MAC stored!${RESET}"
         return
+        echo "  --help        Show this help message"
+        echo "  --quiet       Run without banner or colors"
+        echo ""
+        echo "Features:"
+        echo "  1) Start monitor mode"
+        echo "  2) Stop monitor mode"
+        echo "  3) Show interface status"
     fi
 
     echo -e "${PINK} Restoring original MAC...${RESET}"
